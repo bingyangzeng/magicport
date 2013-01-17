@@ -8,8 +8,7 @@ import (
 
 type Interface interface {
 	IsBufferEnough([]byte) bool
-	IsMatch(buf []byte) bool
-	GetDestAddr() string
+	Match([]byte, string) (bool, net.Conn, error)
 }
 
 type Port struct {
@@ -57,18 +56,19 @@ func (self *Port) bindInterface(conn net.Conn) {
 	buf := make([]byte, self.MaxBufSize)
 	buf_size := 0
 	for _, inter := range self.interfaces {
-		log.Printf("enter inter: %v", inter)
 		for !inter.IsBufferEnough(buf[:buf_size]) {
 			if n, err := conn.Read(buf[buf_size:]); err != nil {
 				log.Printf("%v", err)
 				return
 			} else {
 				buf_size += n
-				log.Printf("read %d", len(buf))
 			}
 		}
-		if inter.IsMatch(buf[:buf_size]) {
-			self.connectInterface(inter, conn, buf)
+		is_match, r_conn, err := inter.Match(buf[:buf_size], self.NetType)
+		if is_match {
+			if err == nil {
+				self.connectInterface(conn, r_conn, buf)
+			}
 			return
 		} else {
 			log.Printf("not match")
@@ -76,18 +76,21 @@ func (self *Port) bindInterface(conn net.Conn) {
 	}
 }
 
-func (self *Port) connectInterface(inter Interface, conn net.Conn, buf []byte) {
-	r_conn, err := net.Dial(self.NetType, inter.GetDestAddr())
-	if err == nil {
-		defer r_conn.Close()
-		for i := 0; i < len(buf); {
-			n, err := r_conn.Write(buf[i:])
-			if err != nil {
-				return
-			}
+func (self *Port) connectInterface(conn net.Conn, r_conn net.Conn, buf []byte) {
+	defer r_conn.Close()
+	go io.Copy(r_conn, conn)
+	io.Copy(conn, r_conn)
+}
+
+func WriteBuf(conn net.Conn, buf []byte) error {
+	n := len(buf)
+	for i := 0; i < n; {
+		if n, err := conn.Write(buf[1:]); err != nil {
+			return err
+		} else {
 			i += n
 		}
-		go io.Copy(r_conn, conn)
-		io.Copy(conn, r_conn)
 	}
+
+	return nil
 }
