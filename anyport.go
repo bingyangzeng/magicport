@@ -1,9 +1,12 @@
 package main
 
 import (
+	"./magicport"
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io"
@@ -15,21 +18,28 @@ var bind_addr = flag.String("bind", "", "address to bind")
 var server_addr = flag.String("server", "", "address of port server")
 var port_addr = flag.String("addr", "", "address to port")
 var key = flag.String("key", "", "server key")
+var key_block cipher.BlockMode
 
-func sendRequest(conn net.Conn, addr string, key []byte) {
-	h := hmac.New(sha1.New, key)
-	h.Write([]byte(addr))
-	digests := h.Sum(nil)
+func sendRequest(conn net.Conn, addr string) error {
+	req := make([]byte, key_block.BlockSize()*4)
+	dst := make([]byte, key_block.BlockSize()*2)
+	src := make([]byte, key_block.BlockSize()*2)
+	copy(src, []byte(addr))
 
-	req := append(bytes.Join([][]byte{[]byte(addr), digests}, []byte(" ")), '\n')
-	conn.Write(req)
+	key_block.CryptBlocks(dst, src)
+	base64.StdEncoding.Encode(req, dst)
+
+	req = append(bytes.TrimRight(req, "\x00"), '\n')
+	_, err := conn.Write(req)
+	return err
 }
 
 func forward(conn net.Conn) {
 	if r_conn, err := net.Dial(*net_type, *server_addr); err == nil {
-		sendRequest(r_conn, *port_addr, []byte(*key))
-		go io.Copy(r_conn, conn)
-		io.Copy(conn, r_conn)
+		if sendRequest(r_conn, *port_addr) == nil {
+			go io.Copy(r_conn, conn)
+			io.Copy(conn, r_conn)
+		}
 	}
 }
 
@@ -45,6 +55,16 @@ func acceptLoop(srv net.Listener) {
 
 func main() {
 	flag.Parse()
+
+	h := sha256.New()
+	h.Write([]byte(*key))
+	if block, err := aes.NewCipher(h.Sum(nil)); err != nil {
+		fmt.Println("create cipher fail:", err)
+		return
+	} else {
+		key_block = cipher.NewCBCEncrypter(block, magicport.AnyPortIV)
+	}
+
 	if srv, err := net.Listen(*net_type, *bind_addr); err == nil {
 		acceptLoop(srv)
 	} else {
