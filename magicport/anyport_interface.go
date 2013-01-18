@@ -23,7 +23,7 @@ func init() {
 
 type AnyPortInterface struct {
 	prefix     []byte
-	key_cipher cipher.BlockMode
+	key_cipher cipher.Block
 }
 
 func NewAnyPortInterface(prefix, key []byte) *AnyPortInterface {
@@ -36,7 +36,7 @@ func NewAnyPortInterface(prefix, key []byte) *AnyPortInterface {
 	if err != nil {
 		return nil
 	}
-	inter.key_cipher = cipher.NewCBCDecrypter(b, AnyPortIV)
+	inter.key_cipher = b
 
 	return inter
 }
@@ -85,7 +85,8 @@ func (self *AnyPortInterface) decrypt(req []byte) ([]byte, error) {
 	}
 
 	dst := make([]byte, self.key_cipher.BlockSize()*2)
-	self.key_cipher.CryptBlocks(dst, src[:self.key_cipher.BlockSize()*2])
+	cipher := cipher.NewCBCDecrypter(self.key_cipher, AnyPortIV)
+	cipher.CryptBlocks(dst, src[:self.key_cipher.BlockSize()*2])
 
 	return bytes.TrimRight(dst, "\x00"), nil
 }

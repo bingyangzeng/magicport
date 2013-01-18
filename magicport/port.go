@@ -70,8 +70,6 @@ func (self *Port) bindInterface(conn net.Conn) {
 				self.connectInterface(conn, r_conn, buf)
 			}
 			return
-		} else {
-			log.Printf("not match")
 		}
 	}
 }

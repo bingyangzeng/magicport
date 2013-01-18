@@ -18,14 +18,15 @@ var bind_addr = flag.String("bind", "", "address to bind")
 var server_addr = flag.String("server", "", "address of port server")
 var port_addr = flag.String("addr", "", "address to port")
 var key = flag.String("key", "", "server key")
-var key_block cipher.BlockMode
+var key_cipher cipher.Block
 
 func sendRequest(conn net.Conn, addr string) error {
-	req := make([]byte, key_block.BlockSize()*4)
-	dst := make([]byte, key_block.BlockSize()*2)
-	src := make([]byte, key_block.BlockSize()*2)
+	req := make([]byte, key_cipher.BlockSize()*4)
+	dst := make([]byte, key_cipher.BlockSize()*2)
+	src := make([]byte, key_cipher.BlockSize()*2)
 	copy(src, []byte(addr))
 
+	key_block := cipher.NewCBCEncrypter(key_cipher, magicport.AnyPortIV)
 	key_block.CryptBlocks(dst, src)
 	base64.StdEncoding.Encode(req, dst)
 
@@ -58,11 +59,12 @@ func main() {
 
 	h := sha256.New()
 	h.Write([]byte(*key))
+	fmt.Println("key:", key)
 	if block, err := aes.NewCipher(h.Sum(nil)); err != nil {
 		fmt.Println("create cipher fail:", err)
 		return
 	} else {
-		key_block = cipher.NewCBCEncrypter(block, magicport.AnyPortIV)
+		key_cipher = block
 	}
 
 	if srv, err := net.Listen(*net_type, *bind_addr); err == nil {
