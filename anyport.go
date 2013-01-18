@@ -59,7 +59,7 @@ func main() {
 
 	h := sha256.New()
 	h.Write([]byte(*key))
-	fmt.Println("key:", key)
+
 	if block, err := aes.NewCipher(h.Sum(nil)); err != nil {
 		fmt.Println("create cipher fail:", err)
 		return

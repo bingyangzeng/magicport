@@ -57,7 +57,13 @@ func (self *AnyPortInterface) Match(buf []byte, net_type string) (bool, net.Conn
 		req := buf[len(self.prefix):idx]
 		if ok, addr := self.getRequest(req); ok {
 			conn, err := net.Dial(net_type, addr)
-			WriteBuf(conn, buf[idx+1:])
+			if err != nil {
+				log.Println("connect remote fail")
+			} else {
+				if err = WriteBuf(conn, buf[idx+1:]); err != nil {
+					return true, conn, err
+				}
+			}
 			return true, conn, err
 		}
 	}
