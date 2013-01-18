@@ -67,11 +67,15 @@ func (self *Port) bindInterface(conn net.Conn) {
 		is_match, r_conn, err := inter.Match(buf[:buf_size], self.NetType)
 		if is_match {
 			if err == nil {
+				//log.Println("start to connectInterface")
 				self.connectInterface(conn, r_conn, buf)
+			} else {
+				log.Println("Match error:", err)
 			}
 			return
 		}
 	}
+	//log.Println("bind fail")
 }
 
 func (self *Port) connectInterface(conn net.Conn, r_conn net.Conn, buf []byte) {
@@ -83,7 +87,7 @@ func (self *Port) connectInterface(conn net.Conn, r_conn net.Conn, buf []byte) {
 func WriteBuf(conn net.Conn, buf []byte) error {
 	n := len(buf)
 	for i := 0; i < n; {
-		if n, err := conn.Write(buf[1:]); err != nil {
+		if n, err := conn.Write(buf[i:]); err != nil {
 			return err
 		} else {
 			i += n
