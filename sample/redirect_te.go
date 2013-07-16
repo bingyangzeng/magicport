@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./magicport"
+	"github.com/lodevil/magicport"
 	"log"
 )
 

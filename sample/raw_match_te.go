@@ -1,6 +1,6 @@
 package main
 
-import "./magicport"
+import "github.com/lodevil/magicport"
 
 func main() {
 	port := magicport.NewPort("tcp", "127.0.0.1:8080")

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"./magicport"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -9,6 +8,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/lodevil/magicport"
 	"io"
 	"net"
 )

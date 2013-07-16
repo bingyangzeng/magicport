@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./magicport"
 	"flag"
+	"github.com/lodevil/magicport"
 )
 
 var bind = flag.String("bind", "", "address to bind")
